@@ -51,18 +51,51 @@ class post:
 		self.like_count = media['edge_media_preview_like']['count']	
 		self.comment_count = media['edge_media_preview_comment']['count']
 		self.location = media['location']
+		self.owner = self.__get_user_info__(media['owner'])
+		self.content = self.__get_post_media__(media)
 		# Yorumlardan Devam Et
+
+
+	@classmethod
+	def __get_post_media__(self, content):
+		try:
+			if 'edge_sidecar_to_children' not in content.keys():
+				if self.is_video:
+					return content['video_url']
+				else:
+					return content['display_url']
+			else:
+				content = content['edge_sidecar_to_children']['edges']
+				all_media = []
+				for per_media in content:
+					is_video = per_media['node']['is_video']
+					if is_video:
+						all_media += [per_media['node']['video_url']]
+					else:
+						all_media += [per_media['node']['display_url']]
+
+				return all_media
+		except Exception as e:
+			with open('errors.log', 'w') as f:
+				f.write(str(e))
+			error_msg = f'Unexpected Error ! \n For more details check errors.log'
+			post.__print_error_and_exit__(error_msg)
+
+
+	@classmethod
+	def __get_user_info__(self, user):
+		full_name = user['full_name']
+		is_verified = user['is_verified']
+		profile_pic_url = user['profile_pic_url']
+		username = user['username']
+		return user_info(username, full_name, is_verified, profile_pic_url)
 
 	@classmethod
 	def __get_tagged_users__(self, media_tagged):
 		all_users = []
 		for user_node in media_tagged['edges']:
 			user = user_node['node']['user']
-			full_name = user['full_name']
-			is_verified = user['is_verified']
-			profile_pic_url = user['profile_pic_url']
-			username = user['username']
-			all_users += [user_info(username, full_name, is_verified, profile_pic_url)]
+			all_users += [self.__get_user_info__(user)]
 		return all_users
 	
 	@classmethod
@@ -82,6 +115,7 @@ class post:
 			post_input = self.__make_link__(post_input)
 		
 		# convert 'post page' to 'json post page'
+		self.link = post_input
 		post_link = post_input + '?__a=1'
 		
 		try:
@@ -159,17 +193,19 @@ class post:
 
 p = post()
 post_id = 'B6pvZPXAbso'
-p.post('https://www.instagram.com/p/B79RIw-pMS9/')
-print('post_id', p.post_id)
-print('post_shortcode', p.post_shortcode)
-print('dimensions', p.dimensions)
-print('display_url', p.display_url)
-print('media_text', p.media_text)
-print('is_video', p.is_video)
-print('tagged_users', p.tagged_users)
-print('captions', p.captions)
-print('time_stamp', p.time_stamp)
-print('like_count', p.like_count)
-print('comment_count', p.comment_count)
-print('location', p.location)
+p.post('https://www.instagram.com/p/B8AAIV1HHtr/')
+print(p.content)
+#print('post_id', p.post_id)
+#print('post_shortcode', p.post_shortcode)
+#print('dimensions', p.dimensions)
+#print('display_url', p.display_url)
+#print('media_text', p.media_text)
+#print('is_video', p.is_video)
+#print('tagged_users', p.tagged_users)
+#print('captions', p.captions)
+#print('time_stamp', p.time_stamp)
+#print('like_count', p.like_count)
+#print('comment_count', p.comment_count)
+#print('location', p.location)
+#print('owner', p.owner)
 #p.download(post_id)
