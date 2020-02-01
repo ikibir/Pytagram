@@ -1,4 +1,4 @@
-# Instagram-Full-Profile-Scraper
+# Instagram For Python
 Python Instagram Full Profile Scraper is an app for download all the post in a profile
 Program has two parts
 Firt part is in the profile.py in this part program keep going next page in the profile until the end
