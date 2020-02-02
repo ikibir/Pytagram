@@ -12,6 +12,9 @@ class user_info:
 
 
 class post:
+	def __init__(self, post_input):
+		self.post(post_input)
+
 	@staticmethod
 	def eprint(*args, **kwargs):
 		print(*args, file=sys.stderr, **kwargs)
@@ -43,16 +46,16 @@ class post:
 		self.post_shortcode = media['shortcode']
 		self.dimensions = (width, height) = media['dimensions']['width'], media['dimensions']['height']
 		self.display_url = media['display_url']
-		self.media_text = media['accessibility_caption'] if 'accessibility_caption' in media.keys() else ""
+		#self.media_text = media['accessibility_caption'] if 'accessibility_caption' in media.keys() else ""
 		self.is_video = media['is_video']
 		self.tagged_users = self.__get_tagged_users__(media['edge_media_to_tagged_user'])
-		self.captions = self._get_post_captions_(media['edge_media_to_caption'])
+		self.captions = self.__get_post_captions__(media['edge_media_to_caption'])
 		self.time_stamp = media['taken_at_timestamp']
 		self.like_count = media['edge_media_preview_like']['count']	
 		self.comment_count = media['edge_media_preview_comment']['count']
 		self.location = media['location']
 		self.owner = self.__get_user_info__(media['owner'])
-		self.content = self.__get_post_media__(media)
+		self.content, self.media_text = self.__get_post_media__(media)
 		# Yorumlardan Devam Et
 
 
@@ -61,20 +64,23 @@ class post:
 		try:
 			if 'edge_sidecar_to_children' not in content.keys():
 				if self.is_video:
-					return content['video_url']
+					return [content['video_url']], None
 				else:
-					return content['display_url']
+					return [content['display_url']], content['accessibility_caption']
 			else:
 				content = content['edge_sidecar_to_children']['edges']
 				all_media = []
+				all_image_info = []
 				for per_media in content:
 					is_video = per_media['node']['is_video']
 					if is_video:
 						all_media += [per_media['node']['video_url']]
+						all_image_info += ['']
 					else:
 						all_media += [per_media['node']['display_url']]
+						all_image_info += [per_media['node']['accessibility_caption']]
+				return all_media, all_image_info
 
-				return all_media
 		except Exception as e:
 			with open('errors.log', 'w') as f:
 				f.write(str(e))
@@ -99,13 +105,12 @@ class post:
 		return all_users
 	
 	@classmethod
-	def _get_post_captions_(self, media_captions):
+	def __get_post_captions__(self, media_captions):
 		all_captions = []
 		for user_node in media_captions['edges']:
 			text = user_node['node']['text']
 			all_captions += [text]
 		return all_captions
-
 
 	@classmethod
 	def post(self, post_input):
@@ -146,66 +151,29 @@ class post:
 		obj = json.loads(json_string)
 		return obj
 
-	def make_dir(self, dir_name):
+	@classmethod
+	def __make_dir__(self, dir_name):
 		if not os.path.exists(dir_name):
 			os.makedirs(dir_name)
 
-	def download(self, post_id):
-		link = f'https://www.instagram.com/p/{post_id}/?__a=1'
-		response = requests.get(link)
-		obj = self.to_dict(response)
-		self.username = obj['graphql']['shortcode_media']['owner']['username']
-		self.make_dir(self.username)
-		try:
-			edges = obj['graphql']['shortcode_media']['edge_sidecar_to_children']['edges']
-		except:
-			media = obj['graphql']['shortcode_media']
-			is_video = media['is_video']
-			if is_video:
-				video_url = media['video_url']
-				self.save_video(video_url, post_id, 0)
+	@classmethod
+	def download(self):
+		self.__make_dir__(self.owner.username)
+		for i,url in enumerate(self.content):
+			if url.find('.mp4?')>=0:
+				self.save_video(url, self.post_shortcode, i)
 			else:
-				image_url = media['display_url']
-				self.save_image(image_url, post_id, 0)
-		else:
-			i=0
-			for edge in edges:
-				is_video = edge['node']['is_video']
-				if is_video:
-					video_url = edge['node']['video_url']
-					self.save_video(video_url, post_id, i)
-					#print(video_url)
-				else:
-					image_url = edge['node']['display_url']
-					self.save_image(image_url, post_id, i)
-					#print(image_url)
+				self.save_image(url, self.post_shortcode, i)
 
-				i+=1
-
+	@classmethod
 	def save_image(self, link, post_id, i):
-		urllib.request.urlretrieve(link, f"{self.username}/{post_id}_{i}.jpg")
+		urllib.request.urlretrieve(link, f"{self.owner.username}/{post_id}_{i}.jpg")
 
+	@classmethod
 	def save_video(self, link, post_id, i):
-		urllib.request.urlretrieve(link, f"{self.username}/{post_id}_{i}.mp4")
+		urllib.request.urlretrieve(link, f"{self.owner.username}/{post_id}_{i}.mp4")
 
 
 
 
-p = post()
-post_id = 'B6pvZPXAbso'
-p.post('https://www.instagram.com/p/B8AAIV1HHtr/')
-print(p.content)
-#print('post_id', p.post_id)
-#print('post_shortcode', p.post_shortcode)
-#print('dimensions', p.dimensions)
-#print('display_url', p.display_url)
-#print('media_text', p.media_text)
-#print('is_video', p.is_video)
-#print('tagged_users', p.tagged_users)
-#print('captions', p.captions)
-#print('time_stamp', p.time_stamp)
-#print('like_count', p.like_count)
-#print('comment_count', p.comment_count)
-#print('location', p.location)
-#print('owner', p.owner)
-#p.download(post_id)
+
