@@ -10,7 +10,6 @@ def to_dict(response):
 	return obj
 
 
-p = post()
 username = input('Enter the user name: ')
 link = f'https://www.instagram.com/{username}/?__a=1'
 
@@ -32,7 +31,8 @@ while True:
 	edges = obj['data']['user']['edge_owner_to_timeline_media']['edges']
 	for edge in edges:
 		shortcode = edge['node']['shortcode']
-		p.download(shortcode)
+		p = post(shortcode)
+		p.download()
 		i+=1
 		print(f'{i} :: Downloading instagram.com/p/{shortcode}')
 	page_info = obj['data']['user']['edge_owner_to_timeline_media']['page_info']
